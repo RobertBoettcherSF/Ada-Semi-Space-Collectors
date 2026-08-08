@@ -2,8 +2,6 @@
 --  Specification for the Semi-Space Garbage Collector (Copying Collector)
 --  Implements both Cheney's Iterative and standard Recursive variants.
 
-with Ada.Exceptions;
-
 package Semi_Space_Collector is
 
    --  Strong typing for object references to prevent accidental integer math
@@ -13,7 +11,7 @@ package Semi_Space_Collector is
    --  Indicates which semi-space is currently acting as From-Space
    type Space_Selector is (Space_A, Space_B);
 
-   --  Variant record representing a memory cell (Node). 
+   --  Variant record representing a memory cell (Node).
    --  During GC, active nodes are replaced with forwarding pointers.
    type Node_Kind is (Active, Forwarded);
    type Node (Kind : Node_Kind := Active) is record

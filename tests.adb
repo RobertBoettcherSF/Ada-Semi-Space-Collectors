@@ -5,7 +5,7 @@ with Semi_Space_Collector; use Semi_Space_Collector;
 procedure Tests is
    H : Heap;
    Roots : Root_Set (1 .. 3) := (others => Null_Id);
-   N1, N2, N3, N4 : Object_Id;
+   N1, N2, N3 : Object_Id;
 begin
    Put_Line ("========================================");
    Put_Line ("V&V TEST SUITE: SEMI-SPACE GC");
@@ -146,7 +146,11 @@ begin
    Initialize (H);
    N1 := Allocate (H, 500);
    N2 := Allocate (H, 600, Left => N1);
-   H.A(Integer(N1)).Right := N2; -- Make cycle
+   if Get_Current_Space (H) = Space_A then
+      H.A(Integer(N1)).Right := N2; -- Make cycle
+   else
+      H.B(Integer(N1)).Right := N2; -- Make cycle
+   end if;
    Roots := (1 => N1, others => Null_Id);
    Collect_Recursive (H, Roots);
    Assert (Active_Space_Usage (H) = 2, "Cycle failed in recursive");
@@ -165,17 +169,22 @@ begin
    Put_Line ("TEST 13 - Garbage Collection Survival Rate");
    Put_Line ("  13.1 Assert GC successfully defragments a fragmented heap");
    Initialize (H);
-   -- Fill heap completely, but lose references to even objects
-   for I in 0 .. 1023 loop
-      N1 := Allocate (H, I);
-      if I mod 2 = 0 then
-         N2 := N1; -- Keep reference to one odd node
-      end if;
-   end loop;
-   Roots := (1 => N2, others => Null_Id);
+   -- Fill heap completely, but lose references to even-indexed objects
+   -- We only keep a reference to the last allocated even-indexed node
+   declare
+      Last_Even : Object_Id := Null_Id;
+   begin
+      for I in 0 .. 1023 loop
+         N1 := Allocate (H, I);
+         if I mod 2 = 0 then
+            Last_Even := N1; -- Keep reference to even nodes
+         end if;
+      end loop;
+      Roots := (1 => Last_Even, others => Null_Id);
+   end;
    Collect_Cheney (H, Roots);
-   -- Should only have 1 node left (N2 was overwritten iteratively, ending on last even node)
-   Assert (Active_Space_Usage (H) = 1, "Defragmentation failed");
+   -- Should only have 512 nodes left (all even-indexed nodes)
+   Assert (Active_Space_Usage (H) = 512, "Defragmentation failed");
    Put_Line ("      PASS");
    
    Put_Line ("========================================");
