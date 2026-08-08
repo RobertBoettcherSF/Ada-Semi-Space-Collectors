@@ -39,7 +39,12 @@ begin
    Initialize (H);
    begin
       for I in 1 .. 1025 loop
-         Allocate (H, I);
+         declare
+            Dummy : Object_Id := Allocate (H, I);
+            pragma Warnings (Off, Dummy);
+         begin
+            null;
+         end;
       end loop;
       Assert (False, "OOM not raised!");
    exception
