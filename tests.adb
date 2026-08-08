@@ -25,7 +25,7 @@ begin
    Put_Line ("TEST 2 - Basic Allocation");
    Put_Line ("  2.1 Assert Alloc_Ptr increments correctly");
    declare
-      N1 : Object_Id := Allocate (H, Val => 100);
+      N1 : constant Object_Id := Allocate (H, Val => 100);
    begin
       Assert (Active_Space_Usage (H) = 1, "Usage did not increment");
       Put_Line ("  2.2 Assert Node values persist accurately");
@@ -72,7 +72,7 @@ begin
    Put_Line ("  5.1 Assert referenced memory is preserved");
    Initialize (H);
    declare
-      N1 : Object_Id := Allocate (H, 999);
+      N1 : constant Object_Id := Allocate (H, 999);
       N2 : Object_Id := Allocate (H, 888);
    begin
       Roots := (1 => N1, others => Null_Id);
@@ -89,13 +89,10 @@ begin
    Put_Line ("  6.1 Assert deep linear references are copied");
    Initialize (H);
    declare
-      N1 : Object_Id;
-      N2 : Object_Id;
-      N3 : Object_Id;
+      N3 : constant Object_Id := Allocate (H, 3);
+      N2 : constant Object_Id := Allocate (H, 2, Left => N3);
+      N1 : constant Object_Id := Allocate (H, 1, Left => N2);
    begin
-      N3 := Allocate (H, 3);
-      N2 := Allocate (H, 2, Left => N3);
-      N1 := Allocate (H, 1, Left => N2);
       Roots := (1 => N1, others => Null_Id);
       Collect_Cheney (H, Roots);
       Assert (Active_Space_Usage (H) = 3, "List copy failed");
@@ -109,13 +106,10 @@ begin
    Put_Line ("  7.1 Assert breadth-first tree copy preserves structure");
    Initialize (H);
    declare
-      N1 : Object_Id;
-      N2 : Object_Id;
-      N3 : Object_Id;
+      N2 : constant Object_Id := Allocate (H, 20);
+      N3 : constant Object_Id := Allocate (H, 30);
+      N1 : constant Object_Id := Allocate (H, 10, Left => N2, Right => N3);
    begin
-      N2 := Allocate (H, 20);
-      N3 := Allocate (H, 30);
-      N1 := Allocate (H, 10, Left => N2, Right => N3);
       Roots := (1 => N1, others => Null_Id);
       Collect_Cheney (H, Roots);
       Assert (Active_Space_Usage (H) = 3, "Tree copy failed");
@@ -128,7 +122,7 @@ begin
    Put_Line ("  8.1 Assert no infinite loop on cyclical pointers");
    Initialize (H);
    declare
-      N1 : Object_Id := Allocate (H, 100);
+      N1 : constant Object_Id := Allocate (H, 100);
       N2 : Object_Id := Allocate (H, 200, Left => N1);
    begin
       -- Creating cycle: N1 -> N2 -> N1
@@ -148,7 +142,7 @@ begin
    Put_Line ("  9.1 Assert multiple roots to same object don't duplicate it");
    Initialize (H);
    declare
-      N1 : Object_Id := Allocate (H, 777);
+      N1 : constant Object_Id := Allocate (H, 777);
    begin
       Roots := (1 => N1, 2 => N1, 3 => N1);
       Collect_Cheney (H, Roots);
@@ -162,13 +156,10 @@ begin
    Put_Line ("  10.1 Assert recursive variant correctly handles basic tree");
    Initialize (H);
    declare
-      N1 : Object_Id;
-      N2 : Object_Id;
-      N3 : Object_Id;
+      N2 : constant Object_Id := Allocate (H, 20);
+      N3 : constant Object_Id := Allocate (H, 30);
+      N1 : constant Object_Id := Allocate (H, 10, Left => N2, Right => N3);
    begin
-      N2 := Allocate (H, 20);
-      N3 := Allocate (H, 30);
-      N1 := Allocate (H, 10, Left => N2, Right => N3);
       Roots := (1 => N1, others => Null_Id);
       Collect_Recursive (H, Roots);
       Assert (Active_Space_Usage (H) = 3, "Recursive copy failed");
@@ -181,7 +172,7 @@ begin
    Put_Line ("  11.1 Assert recursive variant avoids infinite call stack");
    Initialize (H);
    declare
-      N1 : Object_Id := Allocate (H, 500);
+      N1 : constant Object_Id := Allocate (H, 500);
       N2 : Object_Id := Allocate (H, 600, Left => N1);
    begin
       if Get_Current_Space (H) = Space_A then
@@ -217,7 +208,7 @@ begin
       end loop;
       Roots := (1 => Last_Node, others => Null_Id);
       Collect_Cheney (H, Roots);
-      -- Should only have 1 node left (the last one we kept a reference to)
+      -- Should only have 1 node left (the one we kept a reference to)
       Assert (Active_Space_Usage (H) = 1, "Defragmentation failed");
    end;
    Put_Line ("      PASS");
