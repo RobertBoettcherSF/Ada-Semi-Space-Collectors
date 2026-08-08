@@ -39,11 +39,7 @@ begin
    Initialize (H);
    begin
       for I in 1 .. 1025 loop
-         declare
-            N : Object_Id := Allocate (H, I);
-         begin
-            null;
-         end;
+         Allocate (H, I);
       end loop;
       Assert (False, "OOM not raised!");
    exception
@@ -58,6 +54,8 @@ begin
    declare
       N1 : Object_Id := Allocate (H, 50);
       N2 : Object_Id := Allocate (H, 60);
+      pragma Warnings (Off, N1);
+      pragma Warnings (Off, N2);
    begin
       Roots := (others => Null_Id);
       Collect_Cheney (H, Roots);
@@ -74,6 +72,7 @@ begin
    declare
       N1 : constant Object_Id := Allocate (H, 999);
       N2 : Object_Id := Allocate (H, 888);
+      pragma Warnings (Off, N2);
    begin
       Roots := (1 => N1, others => Null_Id);
       Collect_Cheney (H, Roots);
@@ -123,7 +122,7 @@ begin
    Initialize (H);
    declare
       N1 : constant Object_Id := Allocate (H, 100);
-      N2 : Object_Id := Allocate (H, 200, Left => N1);
+      N2 : constant Object_Id := Allocate (H, 200, Left => N1);
    begin
       -- Creating cycle: N1 -> N2 -> N1
       if Get_Current_Space (H) = Space_A then
@@ -173,7 +172,7 @@ begin
    Initialize (H);
    declare
       N1 : constant Object_Id := Allocate (H, 500);
-      N2 : Object_Id := Allocate (H, 600, Left => N1);
+      N2 : constant Object_Id := Allocate (H, 600, Left => N1);
    begin
       if Get_Current_Space (H) = Space_A then
          H.A(Integer(N1)).Right := N2; -- Make cycle
