@@ -4,19 +4,19 @@ GNAT = gnatmake
 OBJ_DIR = obj
 BIN_DIR = bin
 
-all: $(BIN_DIR)/main$(BIN_DIR)/tests
+all: $(BIN_DIR)/main $(BIN_DIR)/tests
 
-$(BIN_DIR)/main: src/main.adb src/semi_space_collector.ads src/semi_space_collector.adb
-	mkdir -p $(OBJ_DIR)$(BIN_DIR)
-	$(GNAT) -P semi_space_gc.gpr -o$(BIN_DIR)/main src/main.adb
+$(BIN_DIR)/main: main.adb semi_space_collector.ads semi_space_collector.adb
+	mkdir -p $(OBJ_DIR) $(BIN_DIR)
+	$(GNAT) -P semi_space.gpr -o $(BIN_DIR)/main main.adb
 
-$(BIN_DIR)/tests: tests.adb src/semi_space_collector.ads src/semi_space_collector.adb
-	mkdir -p $(OBJ_DIR)$(BIN_DIR)
-	$(GNAT) -P semi_space_gc.gpr -o$(BIN_DIR)/tests tests.adb
+$(BIN_DIR)/tests: tests.abd semi_space_collector.ads semi_space_collector.adb
+	mkdir -p $(OBJ_DIR) $(BIN_DIR)
+	$(GNAT) -P semi_space.gpr -o $(BIN_DIR)/tests tests.abd
 
 test: $(BIN_DIR)/tests
 	@echo "Running V&V test suite..."
 	@./$(BIN_DIR)/tests
 
 clean:
-	rm -rf $(OBJ_DIR)/*$(BIN_DIR)/*
+	rm -rf $(OBJ_DIR)/* $(BIN_DIR)/*
