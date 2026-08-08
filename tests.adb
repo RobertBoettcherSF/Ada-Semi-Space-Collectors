@@ -5,7 +5,6 @@ with Semi_Space_Collector; use Semi_Space_Collector;
 procedure Tests is
    H : Heap;
    Roots : Root_Set (1 .. 3) := (others => Null_Id);
-   N1, N2, N3 : Object_Id;
 begin
    Put_Line ("========================================");
    Put_Line ("V&V TEST SUITE: SEMI-SPACE GC");
@@ -25,10 +24,13 @@ begin
    --  TEST 2: Basic Allocation
    Put_Line ("TEST 2 - Basic Allocation");
    Put_Line ("  2.1 Assert Alloc_Ptr increments correctly");
-   N1 := Allocate (H, Val => 100);
-   Assert (Active_Space_Usage (H) = 1, "Usage did not increment");
-   Put_Line ("  2.2 Assert Node values persist accurately");
-   Assert (Get_Node(H, N1).Value = 100, "Node data corrupted");
+   declare
+      N1 : Object_Id := Allocate (H, Val => 100);
+   begin
+      Assert (Active_Space_Usage (H) = 1, "Usage did not increment");
+      Put_Line ("  2.2 Assert Node values persist accurately");
+      Assert (Get_Node(H, N1).Value = 100, "Node data corrupted");
+   end;
    Put_Line ("      PASS");
 
    --  TEST 3: OOM Boundary condition
@@ -37,7 +39,11 @@ begin
    Initialize (H);
    begin
       for I in 1 .. 1025 loop
-         N1 := Allocate (H, I);
+         declare
+            N : Object_Id := Allocate (H, I);
+         begin
+            null;
+         end;
       end loop;
       Assert (False, "OOM not raised!");
    exception
@@ -49,111 +55,144 @@ begin
    Put_Line ("TEST 4 - GC with Empty Root Set");
    Put_Line ("  4.1 Assert all unreferenced memory is reclaimed");
    Initialize (H);
-   N1 := Allocate (H, 50);
-   N2 := Allocate (H, 60);
-   Roots := (others => Null_Id);
-   Collect_Cheney (H, Roots);
-   Assert (Active_Space_Usage (H) = 0, "Memory leak detected");
-   Put_Line ("  4.2 Assert active space swapped");
-   Assert (Get_Current_Space (H) = Space_B, "Space swap failed");
+   declare
+      N1 : Object_Id := Allocate (H, 50);
+      N2 : Object_Id := Allocate (H, 60);
+   begin
+      Roots := (others => Null_Id);
+      Collect_Cheney (H, Roots);
+      Assert (Active_Space_Usage (H) = 0, "Memory leak detected");
+      Put_Line ("  4.2 Assert active space swapped");
+      Assert (Get_Current_Space (H) = Space_B, "Space swap failed");
+   end;
    Put_Line ("      PASS");
 
    --  TEST 5: Garbage Collection (1 Root)
    Put_Line ("TEST 5 - Cheney GC with 1 Root");
    Put_Line ("  5.1 Assert referenced memory is preserved");
    Initialize (H);
-   N1 := Allocate (H, 999);
-   N2 := Allocate (H, 888); 
-   Roots := (1 => N1, others => Null_Id);
-   Collect_Cheney (H, Roots);
-   Assert (Active_Space_Usage (H) = 1, "Wrong object count copied");
-   Put_Line ("  5.2 Assert root pointer is updated to new address");
-   Assert (Roots(1) = 0, "Root not repointed");
-   Assert (Get_Node(H, Roots(1)).Value = 999, "Data corrupted in To-Space");
+   declare
+      N1 : Object_Id := Allocate (H, 999);
+      N2 : Object_Id := Allocate (H, 888);
+   begin
+      Roots := (1 => N1, others => Null_Id);
+      Collect_Cheney (H, Roots);
+      Assert (Active_Space_Usage (H) = 1, "Wrong object count copied");
+      Put_Line ("  5.2 Assert root pointer is updated to new address");
+      Assert (Roots(1) = 0, "Root not repointed");
+      Assert (Get_Node(H, Roots(1)).Value = 999, "Data corrupted in To-Space");
+   end;
    Put_Line ("      PASS");
 
    --  TEST 6: Linked List Traversal
    Put_Line ("TEST 6 - Cheney GC on Linked List");
    Put_Line ("  6.1 Assert deep linear references are copied");
    Initialize (H);
-   N3 := Allocate (H, 3);
-   N2 := Allocate (H, 2, Left => N3);
-   N1 := Allocate (H, 1, Left => N2);
-   Roots := (1 => N1, others => Null_Id);
-   Collect_Cheney (H, Roots);
-   Assert (Active_Space_Usage (H) = 3, "List copy failed");
-   Assert (Get_Node(H, Roots(1)).Value = 1, "Head invalid");
-   Assert (Get_Node(H, Get_Node(H, Roots(1)).Left).Value = 2, "Mid invalid");
+   declare
+      N1 : Object_Id;
+      N2 : Object_Id;
+      N3 : Object_Id;
+   begin
+      N3 := Allocate (H, 3);
+      N2 := Allocate (H, 2, Left => N3);
+      N1 := Allocate (H, 1, Left => N2);
+      Roots := (1 => N1, others => Null_Id);
+      Collect_Cheney (H, Roots);
+      Assert (Active_Space_Usage (H) = 3, "List copy failed");
+      Assert (Get_Node(H, Roots(1)).Value = 1, "Head invalid");
+      Assert (Get_Node(H, Get_Node(H, Roots(1)).Left).Value = 2, "Mid invalid");
+   end;
    Put_Line ("      PASS");
 
    --  TEST 7: Binary Tree Traversal
    Put_Line ("TEST 7 - Cheney GC on Binary Tree");
    Put_Line ("  7.1 Assert breadth-first tree copy preserves structure");
    Initialize (H);
-   N2 := Allocate (H, 20);
-   N3 := Allocate (H, 30);
-   N1 := Allocate (H, 10, Left => N2, Right => N3);
-   Roots := (1 => N1, others => Null_Id);
-   Collect_Cheney (H, Roots);
-   Assert (Active_Space_Usage (H) = 3, "Tree copy failed");
-   Assert (Get_Node(H, Get_Node(H, Roots(1)).Right).Value = 30, "Right node broken");
+   declare
+      N1 : Object_Id;
+      N2 : Object_Id;
+      N3 : Object_Id;
+   begin
+      N2 := Allocate (H, 20);
+      N3 := Allocate (H, 30);
+      N1 := Allocate (H, 10, Left => N2, Right => N3);
+      Roots := (1 => N1, others => Null_Id);
+      Collect_Cheney (H, Roots);
+      Assert (Active_Space_Usage (H) = 3, "Tree copy failed");
+      Assert (Get_Node(H, Get_Node(H, Roots(1)).Right).Value = 30, "Right node broken");
+   end;
    Put_Line ("      PASS");
 
    --  TEST 8: Cyclic References (Cheney)
    Put_Line ("TEST 8 - Cheney GC on Cyclic Graph");
    Put_Line ("  8.1 Assert no infinite loop on cyclical pointers");
    Initialize (H);
-   N1 := Allocate (H, 100);
-   N2 := Allocate (H, 200, Left => N1);
-   -- Creating cycle: N1 -> N2 -> N1
-   if Get_Current_Space (H) = Space_A then
-      H.A(Integer(N1)).Left := N2;
-   else
-      H.B(Integer(N1)).Left := N2;
-   end if;
-   Roots := (1 => N1, others => Null_Id);
-   Collect_Cheney (H, Roots);
-   Assert (Active_Space_Usage (H) = 2, "Cycle duplicated memory");
+   declare
+      N1 : Object_Id := Allocate (H, 100);
+      N2 : Object_Id := Allocate (H, 200, Left => N1);
+   begin
+      -- Creating cycle: N1 -> N2 -> N1
+      if Get_Current_Space (H) = Space_A then
+         H.A(Integer(N1)).Left := N2;
+      else
+         H.B(Integer(N1)).Left := N2;
+      end if;
+      Roots := (1 => N1, others => Null_Id);
+      Collect_Cheney (H, Roots);
+      Assert (Active_Space_Usage (H) = 2, "Cycle duplicated memory");
+   end;
    Put_Line ("      PASS");
 
    --  TEST 9: Forwarding Pointer Integrity
    Put_Line ("TEST 9 - Shared Reference Forwarding");
    Put_Line ("  9.1 Assert multiple roots to same object don't duplicate it");
    Initialize (H);
-   N1 := Allocate (H, 777);
-   Roots := (1 => N1, 2 => N1, 3 => N1);
-   Collect_Cheney (H, Roots);
-   Assert (Active_Space_Usage (H) = 1, "Object duplicated instead of shared");
-   Assert (Roots(1) = Roots(2), "Root references diverged");
+   declare
+      N1 : Object_Id := Allocate (H, 777);
+   begin
+      Roots := (1 => N1, 2 => N1, 3 => N1);
+      Collect_Cheney (H, Roots);
+      Assert (Active_Space_Usage (H) = 1, "Object duplicated instead of shared");
+      Assert (Roots(1) = Roots(2), "Root references diverged");
+   end;
    Put_Line ("      PASS");
 
    --  TEST 10: Recursive GC Variant
    Put_Line ("TEST 10 - Standard Recursive GC Variant");
    Put_Line ("  10.1 Assert recursive variant correctly handles basic tree");
    Initialize (H);
-   N2 := Allocate (H, 20);
-   N3 := Allocate (H, 30);
-   N1 := Allocate (H, 10, Left => N2, Right => N3);
-   Roots := (1 => N1, others => Null_Id);
-   Collect_Recursive (H, Roots);
-   Assert (Active_Space_Usage (H) = 3, "Recursive copy failed");
-   Assert (Get_Node(H, Roots(1)).Value = 10, "Root data invalid");
+   declare
+      N1 : Object_Id;
+      N2 : Object_Id;
+      N3 : Object_Id;
+   begin
+      N2 := Allocate (H, 20);
+      N3 := Allocate (H, 30);
+      N1 := Allocate (H, 10, Left => N2, Right => N3);
+      Roots := (1 => N1, others => Null_Id);
+      Collect_Recursive (H, Roots);
+      Assert (Active_Space_Usage (H) = 3, "Recursive copy failed");
+      Assert (Get_Node(H, Roots(1)).Value = 10, "Root data invalid");
+   end;
    Put_Line ("      PASS");
 
    --  TEST 11: Cyclic References (Recursive)
    Put_Line ("TEST 11 - Recursive GC on Cyclic Graph");
    Put_Line ("  11.1 Assert recursive variant avoids infinite call stack");
    Initialize (H);
-   N1 := Allocate (H, 500);
-   N2 := Allocate (H, 600, Left => N1);
-   if Get_Current_Space (H) = Space_A then
-      H.A(Integer(N1)).Right := N2; -- Make cycle
-   else
-      H.B(Integer(N1)).Right := N2; -- Make cycle
-   end if;
-   Roots := (1 => N1, others => Null_Id);
-   Collect_Recursive (H, Roots);
-   Assert (Active_Space_Usage (H) = 2, "Cycle failed in recursive");
+   declare
+      N1 : Object_Id := Allocate (H, 500);
+      N2 : Object_Id := Allocate (H, 600, Left => N1);
+   begin
+      if Get_Current_Space (H) = Space_A then
+         H.A(Integer(N1)).Right := N2; -- Make cycle
+      else
+         H.B(Integer(N1)).Right := N2; -- Make cycle
+      end if;
+      Roots := (1 => N1, others => Null_Id);
+      Collect_Recursive (H, Roots);
+      Assert (Active_Space_Usage (H) = 2, "Cycle failed in recursive");
+   end;
    Put_Line ("      PASS");
 
    --  TEST 12: Null Pointers in Roots
@@ -169,22 +208,18 @@ begin
    Put_Line ("TEST 13 - Garbage Collection Survival Rate");
    Put_Line ("  13.1 Assert GC successfully defragments a fragmented heap");
    Initialize (H);
-   -- Fill heap completely, but lose references to even-indexed objects
-   -- We only keep a reference to the last allocated even-indexed node
    declare
-      Last_Even : Object_Id := Null_Id;
+      Last_Node : Object_Id := Null_Id;
    begin
+      -- Fill heap completely, keeping only the last allocated node
       for I in 0 .. 1023 loop
-         N1 := Allocate (H, I);
-         if I mod 2 = 0 then
-            Last_Even := N1; -- Keep reference to even nodes
-         end if;
+         Last_Node := Allocate (H, I);
       end loop;
-      Roots := (1 => Last_Even, others => Null_Id);
+      Roots := (1 => Last_Node, others => Null_Id);
+      Collect_Cheney (H, Roots);
+      -- Should only have 1 node left (the last one we kept a reference to)
+      Assert (Active_Space_Usage (H) = 1, "Defragmentation failed");
    end;
-   Collect_Cheney (H, Roots);
-   -- Should only have 512 nodes left (all even-indexed nodes)
-   Assert (Active_Space_Usage (H) = 512, "Defragmentation failed");
    Put_Line ("      PASS");
    
    Put_Line ("========================================");
