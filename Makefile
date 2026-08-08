@@ -8,11 +8,11 @@ all: $(BIN_DIR)/main $(BIN_DIR)/tests
 
 $(BIN_DIR)/main: main.adb semi_space_collector.ads semi_space_collector.adb
 	mkdir -p $(OBJ_DIR) $(BIN_DIR)
-	$(GNAT) -P semi_space.gpr -o $(BIN_DIR)/main main.adb
+	$(GNAT) -P semi_space.gpr main.adb
 
 $(BIN_DIR)/tests: tests.abd semi_space_collector.ads semi_space_collector.adb
 	mkdir -p $(OBJ_DIR) $(BIN_DIR)
-	$(GNAT) -P semi_space.gpr -o $(BIN_DIR)/tests tests.abd
+	$(GNAT) -P semi_space.gpr tests.abd
 
 test: $(BIN_DIR)/tests
 	@echo "Running V&V test suite..."
